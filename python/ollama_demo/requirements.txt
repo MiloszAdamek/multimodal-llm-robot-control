@@ -1,0 +1,4 @@
+pydantic>=2.6
+requests>=2.31
+pillow>=10.0
+pytest>=8.0
