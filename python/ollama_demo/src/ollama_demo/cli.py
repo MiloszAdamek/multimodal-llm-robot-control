@@ -16,9 +16,12 @@ def build_arg_parser() -> argparse.ArgumentParser:
     src = p.add_mutually_exclusive_group()
     src.add_argument(
         "--image",
-        type=str,
+        type=Path,
         default=None,
-        help="Path to an image (jpg/png). If omitted, runs a text-only test.",
+        help=(
+            "Path to an image (jpg/png). Relative paths are resolved from the current working directory. "
+            "If omitted, runs a text-only test."
+        ),
     )
     src.add_argument(
         "--snapshot-url",
@@ -61,13 +64,13 @@ def build_arg_parser() -> argparse.ArgumentParser:
     )
     p.add_argument(
         "--out",
-        type=str,
+        type=Path,
         default=None,
         help="Optional: write parsed result (JSON) to a file, e.g. outputs/result.json",
     )
     p.add_argument(
         "--raw-out",
-        type=str,
+        type=Path,
         default=None,
         help="Optional: write raw Ollama response to a file.",
     )
@@ -112,7 +115,7 @@ def main() -> int:
     print(data)
 
     if args.out:
-        Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+        args.out.parent.mkdir(parents=True, exist_ok=True)
         save_json(args.out, data)
 
     return 0

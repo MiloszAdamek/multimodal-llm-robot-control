@@ -1,11 +1,12 @@
 import json
+from pathlib import Path
 from PIL import Image, ImageDraw
 
-image_path = r".\outputs\snapshot_672x672.jpg"
-parsed_path = r".\outputs\parsed.json"
-out_path = r".\outputs\annotated.png"
+image_path = Path("outputs") / "snapshot_672x672.jpg"
+parsed_path = Path("outputs") / "parsed.json"
+out_path = Path("outputs") / "annotated.png"
 
-with open(parsed_path, "r", encoding="utf-8") as f:
+with parsed_path.open("r", encoding="utf-8") as f:
     payload = json.load(f)
 
 bbox = payload["door"]["bbox"]

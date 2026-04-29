@@ -4,7 +4,7 @@ Minimalny starter do testów: **zdjęcie → percepcja → komenda** przy użyci
 
 ## 1) Wymagania
 
-- Windows 10/11
+- Windows 10/11 **lub** Linux/macOS
 - Python 3.10+ (polecane 3.11)
 - Zainstalowane **Ollama** i uruchomiony serwis lokalny
 
@@ -44,10 +44,22 @@ curl http://localhost:11434/api/tags
 
 ## 2) Instalacja
 
+### Windows
+
 ```powershell
 cd e:\AGH\AiR\AiR_mgr\multimodal-llm-robot-control
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+pip install -e .
+```
+
+### Linux / macOS
+
+```bash
+cd /path/to/multimodal-llm-robot-control/python/ollama_demo
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 pip install -e .
 ```
@@ -89,6 +101,18 @@ Uwaga: **nie każdy wariant Gemma jest multimodalny**. Jeśli model nie obsługu
 
 ### Test ze zdjęciem
 
+Jeśli zdjęcie jest w folderze `data/` w repo, możesz podać ścieżkę względną (ważne: względem bieżącego katalogu w terminalu):
+
+```powershell
+ollama-demo --image data\photo.jpg --model gemma3 --task "Określ położenie robota i zaproponuj bezpieczną komendę."
+```
+
+Linux/macOS:
+
+```bash
+ollama-demo --image data/photo.jpg --model gemma3 --task "Określ położenie robota i zaproponuj bezpieczną komendę."
+```
+
 ```powershell
 ollama-demo --image "C:\path\to\photo.jpg" --model gemma3 --task "Określ położenie robota i zaproponuj bezpieczną komendę."
 
@@ -124,6 +148,12 @@ ollama-demo --image "C:\path\to\photo.jpg" --model gemma3 --out outputs\result.j
 
 # albo:
 python -m ollama_demo.cli --image "C:\path\to\photo.jpg" --model gemma3 --out outputs\result.json --raw-out outputs\raw.json
+```
+
+Linux/macOS:
+
+```bash
+ollama-demo --image /full/path/to/photo.jpg --model gemma3 --out outputs/result.json --raw-out outputs/raw.json
 ```
 
 ## 5) Co zwraca model

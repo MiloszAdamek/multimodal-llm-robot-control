@@ -68,7 +68,11 @@ def denormalize_bbox_payload(payload: Dict[str, Any], *, width: int, height: int
     return payload
 
 
-def _get_image_size(*, image_path: Optional[str], image_b64: Optional[str]) -> Optional[tuple[int, int]]:
+def _get_image_size(
+    *,
+    image_path: Optional[str | Path],
+    image_b64: Optional[str],
+) -> Optional[tuple[int, int]]:
     try:
         from PIL import Image
     except Exception:
@@ -123,7 +127,7 @@ def run_inference_ollama(
     *,
     model: str,
     task: str,
-    image_path: Optional[str] = None,
+    image_path: Optional[str | Path] = None,
     image_b64: Optional[str] = None,
     base_url: str,
     temperature: float = 0.2,
