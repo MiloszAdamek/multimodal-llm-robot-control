@@ -11,65 +11,65 @@ from .ollama_client import encode_bytes_b64
 
 def build_arg_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
-        description="Demo: obraz -> (pozycja robota + komenda) przez lokalne Ollama"
+        description="Demo: image -> (door detection + motion command) via local Ollama"
     )
     src = p.add_mutually_exclusive_group()
     src.add_argument(
         "--image",
         type=str,
         default=None,
-        help="Ścieżka do obrazu (jpg/png). Jeśli pominięte, test tekstowy.",
+        help="Path to an image (jpg/png). If omitted, runs a text-only test.",
     )
     src.add_argument(
         "--snapshot-url",
         type=str,
         default=None,
         help=(
-            "URL do snapshotu z kamery (np. ESP32-CAM). "
-            "Typowo: http://<ip>/capture albo /jpg (zależnie od firmware)."
+            "Snapshot URL from a camera (e.g., ESP32-CAM). "
+            "Typically: http://<ip>/capture or /jpg (depends on firmware)."
         ),
     )
     p.add_argument(
         "--task",
         type=str,
-        default="Oceń gdzie jest robot i czy powinien się poruszyć.",
-        help="Opis celu sterowania.",
+        default="Find the nearest door and decide whether the robot should move.",
+        help="Task description.",
     )
     p.add_argument(
         "--model",
         type=str,
         default="gemma3",
-        help="Nazwa modelu w Ollama (np. gemma3, gemma3:latest, llava).",
+        help="Model name in Ollama (e.g., gemma3, gemma3:latest, llava).",
     )
     p.add_argument(
         "--ollama-url",
         type=str,
         default="http://localhost:11434",
-        help="Adres bazowy Ollama.",
+        help="Ollama base URL.",
     )
     p.add_argument(
         "--temperature",
         type=float,
         default=0.2,
-        help="Temperatura generacji.",
+        help="Generation temperature.",
     )
     p.add_argument(
         "--snapshot-timeout",
         type=float,
         default=10.0,
-        help="Timeout (sek) dla pobrania snapshotu z URL.",
+        help="Timeout (seconds) for fetching the snapshot URL.",
     )
     p.add_argument(
         "--out",
         type=str,
         default=None,
-        help="Opcjonalnie: zapis wyniku (JSON) do pliku, np. outputs/result.json",
+        help="Optional: write parsed result (JSON) to a file, e.g. outputs/result.json",
     )
     p.add_argument(
         "--raw-out",
         type=str,
         default=None,
-        help="Opcjonalnie: zapis surowej odpowiedzi Ollama do pliku.",
+        help="Optional: write raw Ollama response to a file.",
     )
     return p
 
@@ -84,7 +84,7 @@ def main() -> int:
             resp.raise_for_status()
             image_b64 = encode_bytes_b64(resp.content)
         except requests.RequestException as e:
-            print("ERROR: Nie udało się pobrać snapshotu:", e)
+            print("ERROR: Failed to fetch snapshot:", e)
             return 2
 
     parsed, raw, err = run_inference_ollama(

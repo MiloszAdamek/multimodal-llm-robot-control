@@ -52,6 +52,27 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
+### 2a) CLI i workflow (ważne na Windows)
+
+- Po `pip install -e .` komenda `ollama-demo` jest instalowana do `.venv\Scripts`.
+- Jeśli masz aktywne venv (`.\.venv\Scripts\Activate.ps1`), możesz używać:
+
+```powershell
+ollama-demo --help
+```
+
+- Jeśli nie masz aktywnego venv (albo PATH nie widzi `.venv\Scripts`), uruchom pełną ścieżką:
+
+```powershell
+.\.venv\Scripts\ollama-demo.exe --help
+```
+
+- Gdy zmienisz `pyproject.toml` (np. zależności lub `[project.scripts]`), wykonaj ponownie:
+
+```powershell
+pip install -e .
+```
+
 ## 3) Model w Ollama
 
 1. Uruchom Ollama.
@@ -69,7 +90,11 @@ Uwaga: **nie każdy wariant Gemma jest multimodalny**. Jeśli model nie obsługu
 ### Test ze zdjęciem
 
 ```powershell
+ollama-demo --image "C:\path\to\photo.jpg" --model gemma3 --task "Określ położenie robota i zaproponuj bezpieczną komendę."
+
+# albo:
 python -m ollama_demo.cli --image "C:\path\to\photo.jpg" --model gemma3 --task "Określ położenie robota i zaproponuj bezpieczną komendę."
+```
 
 ### ESP32-CAM (snapshot po HTTP)
 
@@ -77,19 +102,27 @@ Jeśli ESP32-CAM wystawia endpoint ze zdjęciem (często to `/capture`, czasem `
 możesz testować bez ręcznego zapisywania pliku:
 
 ```powershell
+ollama-demo --snapshot-url "http://192.168.1.123/capture" --model gemma3 --task "Oceń czy jechać prosto czy stop."
+
+# albo:
 python -m ollama_demo.cli --snapshot-url "http://192.168.1.123/capture" --model gemma3 --task "Oceń czy jechać prosto czy stop."
 ```
 
 Jeśli snapshot ładuje się wolno, zwiększ timeout:
 
 ```powershell
+ollama-demo --snapshot-url "http://192.168.1.123/capture" --snapshot-timeout 30 --model gemma3
+
+# albo:
 python -m ollama_demo.cli --snapshot-url "http://192.168.1.123/capture" --snapshot-timeout 30 --model gemma3
-```
 ```
 
 ### Zapis wyniku do pliku
 
 ```powershell
+ollama-demo --image "C:\path\to\photo.jpg" --model gemma3 --out outputs\result.json --raw-out outputs\raw.json
+
+# albo:
 python -m ollama_demo.cli --image "C:\path\to\photo.jpg" --model gemma3 --out outputs\result.json --raw-out outputs\raw.json
 ```
 
@@ -106,3 +139,9 @@ Program oczekuje odpowiedzi w JSON (walidowanej przez Pydantic):
 Na start to tylko "percepcja + propozycja komendy". Gdy będziesz gotowy:
 - ustalimy format komend pod Twojego robota (np. ROS2 `geometry_msgs/Twist`),
 - dodamy node publikujący komendy i/lub pobierający obraz z kamery.
+
+
+Invoke-WebRequest "http://192.168.10.227/jpg" -OutFile ".\outputs\snapshot.jpg"                                              
+
+ollama-demo --image ".\outputs\snapshot.jpg" --model llava:latest --out ".\outputs\parsed.json" --raw-out ".\outputs\raw.json"
+

@@ -17,22 +17,31 @@ class RobotInImage(BaseModel):
     bbox: Optional[BBox] = None
     heading_deg: Optional[float] = Field(
         default=None,
-        description="Szacowany kierunek (yaw) robota względem kamery, w stopniach.",
+        description="Estimated robot heading (yaw) relative to the camera, in degrees.",
+    )
+
+class DoorInImage(BaseModel):
+    visible: bool
+    bbox: Optional[BBox] = None
+    heading_deg: Optional[float] = Field(
+        default=None,
+        description="Estimated door heading (yaw) relative to the camera, in degrees.",
     )
 
 
 class MotionCommand(BaseModel):
     action: Literal["move", "stop", "turn_left", "turn_right", "unknown"]
     linear_vel_mps: float = Field(
-        default=0.0, description="Zadana prędkość liniowa (m/s)."
+        default=0.0, description="Commanded linear velocity (m/s)."
     )
     angular_vel_rps: float = Field(
-        default=0.0, description="Zadana prędkość kątowa (rad/s)."
+        default=0.0, description="Commanded angular velocity (rad/s)."
     )
 
 
 class PerceptionAndCommand(BaseModel):
-    robot: RobotInImage
+    # robot: RobotInImage  # legacy/unused
+    door: DoorInImage
     command: MotionCommand
     confidence: float = Field(ge=0.0, le=1.0)
     notes: str = ""
