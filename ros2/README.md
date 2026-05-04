@@ -23,3 +23,5 @@ killall -9 gazebo gzserver gzclient
 colcon build 
 source install/setup.bash
 ros2 launch mobile_robot robot.launch.py
+
+colcon build
