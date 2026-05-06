@@ -34,8 +34,8 @@ class LLMController(Node):
         self.current_yaw = 0.0
 
         # Goal
-        self.goal_x = -5.0
-        self.goal_y = 4.0
+        self.goal_x = 2.0
+        self.goal_y = -1.0
 
         # P controller
         self.k_linear = 0.8
@@ -127,9 +127,9 @@ class LLMController(Node):
 
                     Based on the state decide only one action:
 
-                    - "rotate"  → if heading error is large
-                    - "forward" → if heading error is small
-                    - "stop"    → if distance is very small less than 0.1
+                    - "rotate" if heading error is large
+                    - "forward" if heading error is small
+                    - "stop" if distance is very small less than 0.1
 
                     Distance to goal: {distance:.3f}
                     Heading error: {angle_error:.3f}
