@@ -2,6 +2,8 @@ import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
+from nav_msgs.msg import Path
+from geometry_msgs.msg import PoseStamped
 import requests
 import json
 import math
@@ -32,7 +34,7 @@ class LLMController(Node):
         self.current_yaw = 0.0
 
         # Goal
-        self.goal_x = 16.0
+        self.goal_x = -5.0
         self.goal_y = 4.0
 
         # P controller
@@ -48,6 +50,12 @@ class LLMController(Node):
         self.llm_busy = False
         self.goal_reached = False
 
+        # Publisher for path visualization
+        self.path_publisher = self.create_publisher(Path, '/robot_path', 10)
+
+        self.path_msg = Path()
+        self.path_msg.header.frame_id = "odom"
+
     def clamp(self, value, min_val, max_val):
         return max(min(value, max_val), min_val)
 
@@ -60,6 +68,25 @@ class LLMController(Node):
         self.current_x = msg.pose.pose.position.x
         self.current_y = msg.pose.pose.position.y
         self.current_yaw = self.quaternion_to_yaw(msg.pose.pose.orientation)
+
+        # Update path for visualization
+        pose = PoseStamped()
+        pose.header.frame_id = "odom"
+        pose.header.stamp = self.get_clock().now().to_msg()
+
+        pose.pose.position.x = self.current_x
+        pose.pose.position.y = self.current_y
+        pose.pose.position.z = 0.0
+        pose.pose.orientation = msg.pose.pose.orientation
+
+        self.path_msg.header.stamp = pose.header.stamp
+        self.path_msg.poses.append(pose)
+
+        # Max path length
+        if len(self.path_msg.poses) > 2000:
+            self.path_msg.poses.pop(0)
+
+        self.path_publisher.publish(self.path_msg)
 
     def shutdown_node(self):
         self.get_logger().info("Shutting down node...")

@@ -23,11 +23,11 @@ def generate_launch_description():
             package='robot_state_publisher',
             executable='robot_state_publisher',
             parameters=[{
-                'robot_description': Command(['cat ', urdf_file])
+                'robot_description': open(urdf_file).read()
             }],
             output='screen'
         ),
-
+        
         Node(
             package='gazebo_ros',
             executable='spawn_entity.py',
