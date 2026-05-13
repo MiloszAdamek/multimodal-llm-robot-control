@@ -1,21 +1,23 @@
 Każdy terminal to osobne środowisko.
 
 Wymagane:
+cd ros2
+source /opt/ros/humble/setup.bash
 source install/setup.bash
 
 ros2 pkg list | grep llm
-ros2 pkg list | grep llm
-
 
 Terminal 1:
-ros2 run llm_controller llm_node
+ros2 launch mobile_robot sim.launch.py
 
 Terminal 2:
+ros2 run llm_controller robot_action_server
+
+Terminal 3:
 ros2 run llm_controller llm_node
 
-Terminal 3 (opcjonalnie):
-ros2 topic echo /cmd_vel
-
+Terminal 4 (podgląd kamery, opcjonalne):
+ros2 run image_tools showimage --ros-args -r image:=/camera/image_raw
 
 w /ros2:
 

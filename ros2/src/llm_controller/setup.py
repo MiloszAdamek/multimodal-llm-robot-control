@@ -19,6 +19,7 @@ setup(
     entry_points={
         'console_scripts': [
             'llm_node = llm_controller.llm_node:main',
+            'robot_action_server = llm_controller.robot_action_server:main',
         ],
     },
 )
