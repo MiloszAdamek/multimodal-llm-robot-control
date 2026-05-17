@@ -17,7 +17,7 @@ Terminal 3:
 ros2 run llm_controller llm_node
 
 Terminal 4 (podgląd kamery, opcjonalne):
-ros2 run image_tools showimage --ros-args -r image:=/camera/image_raw
+ros2 run rqt_image_view rqt_image_view
 
 w /ros2:
 

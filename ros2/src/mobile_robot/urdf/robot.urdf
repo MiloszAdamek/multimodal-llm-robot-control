@@ -135,21 +135,22 @@
 
     </plugin>
   </gazebo>
-  
-  <!-- ================= CAMERA ================= -->
-<link name="camera_link"/>
-<joint name="camera_joint" type="fixed">
+
+<!-- ================= Depth Camera ================= -->
+<link name="depth_camera_link"/>
+<joint name="depth_camera_joint" type="fixed">
   <parent link="base_link"/>
-  <child link="camera_link"/>
+  <child link="depth_camera_link"/>
   <origin xyz="0.2 0 0.1" rpy="0 0 0"/>
 </joint>
 
-<gazebo reference="camera_link">
-  <sensor type="camera" name="camera">
-    <update_rate>30</update_rate>
+<gazebo reference="depth_camera_link">
+  <sensor type="depth" name="depth_camera_sensor">
+    <pose>0 0 0 0 0 0</pose>
+    <update_rate>20</update_rate>
 
     <camera>
-      <horizontal_fov>1.57</horizontal_fov>
+      <horizontal_fov>2</horizontal_fov>
       <image>
         <width>640</width>
         <height>480</height>
@@ -157,54 +158,12 @@
       </image>
       <clip>
         <near>0.1</near>
-        <far>10</far>
+        <far>5</far>
       </clip>
     </camera>
 
-    <plugin name="camera_plugin" filename="libgazebo_ros_camera.so">
-      <frame_name>camera_link</frame_name>
-    </plugin>
-  </sensor>
-</gazebo>
-
-<!-- ================= LIDAR ================= -->
-<link name="ray_link"/>
-
-<joint name="ray_joint" type="fixed">
-  <parent link="base_link"/>
-  <child link="ray_link"/>
-  <origin xyz="0.2 0 0.1" rpy="0 0 0"/>
-</joint>
-
-<gazebo reference="ray_link">
-  <sensor type="ray" name="front_distance_sensor">
-    <pose>0 0 0 0 0 0</pose>
-    <visualize>true</visualize>
-    <update_rate>20</update_rate>
-
-    <ray>
-      <scan>
-        <horizontal>
-          <samples>1</samples>
-          <resolution>1</resolution>
-          <min_angle>0</min_angle>
-          <max_angle>0</max_angle>
-        </horizontal>
-      </scan>
-
-      <range>
-        <min>0.05</min>
-        <max>5.0</max>
-      </range>
-    </ray>
-
-    <plugin name="ray_plugin" filename="libgazebo_ros_ray_sensor.so">
-    <ros>
-      <namespace>/ray</namespace>
-      <remapping>~/out:=scan</remapping>
-    </ros>
-    <output_type>sensor_msgs/LaserScan</output_type>
-    <frame_name>ray_link</frame_name>
+    <plugin name="depth_camera" filename="libgazebo_ros_camera.so">
+      <frame_name>depth_camera_link</frame_name>
     </plugin>
 
   </sensor>

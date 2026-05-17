@@ -52,9 +52,23 @@ def generate_launch_description():
         ]
     )
 
+    blue_box_model = os.path.join(pkg_share, 'urdf', 'blue_box', 'model.sdf')
+    spawn_blue_box = Node(
+        package='gazebo_ros',
+        executable='spawn_entity.py',
+        output='screen',
+        arguments=[
+            '-file', blue_box_model,
+            '-entity', 'blue_box',
+            '-x', '1.0',
+            '-y', '4.0',
+            '-z', '0.05'
+        ]
+    )
+
     delayed_spawn = TimerAction(
         period=5.0,
-        actions=[spawn_entity]
+        actions=[spawn_entity, spawn_blue_box]
     )
 
     return LaunchDescription([

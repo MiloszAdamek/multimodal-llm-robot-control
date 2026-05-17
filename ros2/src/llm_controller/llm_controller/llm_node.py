@@ -5,7 +5,6 @@ from nav_msgs.msg import Odometry
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped
 from sensor_msgs.msg import Image
-from sensor_msgs.msg import LaserScan
 from cv_bridge import CvBridge
 from llm_controller_interfaces.srv import DoRobotAction
 
@@ -36,21 +35,22 @@ class LLMController(Node):
             10
         )
 
-        # Camera
+        # Depth Camera
         self.bridge = CvBridge()
+        
         self.latest_frame = None
         self.create_subscription(
             Image,
-            '/camera/image_raw',
+            '/depth_camera_sensor/image_raw',
             self.camera_callback,
             10
         )
 
-        self.distance = None
+        self.latest_depth = None
         self.create_subscription(
-            LaserScan,
-            '/ray/scan',
-            self.scan_callback,
+            Image,
+            '/depth_camera_sensor/depth/image_raw',
+            self.depth_callback,
             10
         )
 
@@ -64,6 +64,7 @@ class LLMController(Node):
             self.get_logger().info("Waiting for service...")
 
         # Current state
+        self.last_actions = ["None","None"]
         self.current_x = 0.0
         self.current_y = 0.0
         self.current_yaw = 0.0
@@ -85,15 +86,19 @@ class LLMController(Node):
         )
 
         self.latest_frame = frame
+    
+    def depth_callback(self, msg):
+        depth = self.bridge.imgmsg_to_cv2(
+            msg,
+            desired_encoding='passthrough'
+        )
+
+        self.latest_depth = depth
 
     def encode_image(self, frame):
         _, buffer = cv2.imencode('.jpg', frame)
 
         return base64.b64encode(buffer).decode('utf-8')
-
-    def scan_callback(self, msg):
-        distance = msg.ranges[0]
-        self.distance = distance
 
     def quaternion_to_yaw(self, q):
         siny_cosp = 2 * (q.w * q.z + q.x * q.y)
@@ -137,39 +142,37 @@ class LLMController(Node):
         return future.result()
 
     def ask_llm(self):
-        if self.latest_frame is None or self.distance is None:
-            self.get_logger().info("No camera frame yet")
+        if self.latest_frame is None or self.latest_depth is None:
+            self.get_logger().info("No camera frame or depth data yet")
             return
 
         image_base64 = self.encode_image(self.latest_frame)
 
-        prompt = f"""You control a mobile robot. 
-                    Your goal: Find a box, keep it near the center of the image and drive to it and stop.
-                    FOLLOW these rules:
-                    - if box is left -> left
-                    - if box is right -> right
-                    - if box is centered -> forward
-                    - if distance < 0.2 m -> stop
-                    - if no box visible -> rotate left
-                    THINK short about your action and respond ONLY with JSON:
-                    {{"action": "left" or "right" or "forward" or "stop"}}
-
-                    Distance to the object in center of image: {self.distance}"""
-        #prompt = "Describe what you see in the image in one sentence."
+        prompt = f"""You are a perception module for a mobile robot.
+                    Your goal: Find a box, drive towards it and stop when close.
+                    Rules:
+                    - If object is close → action = "stop"
+                    - If object is not visible → action = "search"
+                    - If object is left → action = "left"
+                    - If object is right → action = "right"
+                    - If object is centered → action = "forward"
+                    Respond ONLY with valid JSON:
+                    {{"action": "search" | "left" | "right" | "forward" | "stop"}}
+                    Image size: {self.latest_frame.shape}"""
 
         response = requests.post(
-            "http://192.168.128.1:11434/api/generate",
+            "http://192.168.224.1:11434/api/generate",
             json={
-                "model": "qwen3-vl:4b",
+                "model": "qwen3.5:4b",
                 "prompt": prompt,
                 "images": [image_base64],
                 "stream": False,
             },
-            # timeout=15.0
         )
+        self.get_logger().info(response.json()["thinking"])
 
         text = response.json()["response"]
-        print(text)
+        
         match = re.search(r"\{.*?\}", text, re.DOTALL)
         if not match:
             raise ValueError("No JSON found")
@@ -177,13 +180,22 @@ class LLMController(Node):
         data = json.loads(match.group(0))
 
         action = data["action"].lower()
+        self.last_actions.append(action)
+        if len(self.last_actions) > 2:
+            self.last_actions.pop(0)
+
         self.get_logger().info(f"LLM action: {action}")
 
-        if action in ["left", "right", "forward", "stop"]:
-            if action == "left" or action == "right":
-                value = 15
-            elif action == "forward":
+        if action in ["search", "left", "right", "forward", "stop"]:
+            if action == "search":
+                action = "left"
+                value = 25
+            elif action == "left":
                 value = 10
+            elif action == "right":
+                value = 10
+            elif action == "forward":
+                value = 20
             else:
                 value = 0
             self.send_action(action, value)
