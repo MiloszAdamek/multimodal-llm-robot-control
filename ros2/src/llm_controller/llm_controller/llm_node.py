@@ -3,6 +3,7 @@ from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from nav_msgs.msg import Path
+from std_msgs.msg import Bool
 from geometry_msgs.msg import PoseStamped
 from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
@@ -35,7 +36,14 @@ class LLMController(Node):
             10
         )
 
-        # Depth Camera
+        self.create_subscription(
+            Bool,
+            '/llm_shutdown',
+            self.shutdown_callback,
+            10
+        )
+
+        # Camera
         self.bridge = CvBridge()
         
         self.latest_frame = None
@@ -79,14 +87,12 @@ class LLMController(Node):
         self.agent_thread = threading.Thread(target=self.agent_loop, daemon=True)
         self.agent_thread.start()
 
-    def camera_callback(self, msg):
-        frame = self.bridge.imgmsg_to_cv2(
-            msg,
-            desired_encoding='bgr8'
-        )
+    def shutdown_callback(self, msg):
+        if msg.data:
+            self.get_logger().info("Shutdown signal received")
 
-        self.latest_frame = frame
-    
+            self.running = False
+
     def depth_callback(self, msg):
         depth = self.bridge.imgmsg_to_cv2(
             msg,
@@ -94,6 +100,34 @@ class LLMController(Node):
         )
 
         self.latest_depth = depth
+
+    def obstacle_distance(self):
+        if self.latest_depth is None:
+            return False
+
+        depth = self.latest_depth
+
+        h, w = depth.shape
+
+        roi = depth[h//2 - 20:h//2 + 20, w//2 - 20:w//2 + 20]
+
+        roi = roi[~np.isnan(roi)]
+        roi = roi[roi > 0.01]
+
+        if len(roi) == 0:
+            return False
+
+        min_dist = np.min(roi)
+
+        return min_dist
+
+    def camera_callback(self, msg):
+        frame = self.bridge.imgmsg_to_cv2(
+            msg,
+            desired_encoding='bgr8'
+        )
+
+        self.latest_frame = frame
 
     def encode_image(self, frame):
         _, buffer = cv2.imencode('.jpg', frame)
@@ -142,31 +176,31 @@ class LLMController(Node):
         return future.result()
 
     def ask_llm(self):
-        if self.latest_frame is None or self.latest_depth is None:
-            self.get_logger().info("No camera frame or depth data yet")
+        if self.latest_frame is None:
+            self.get_logger().info("No camera frame yet")
             return
 
         image_base64 = self.encode_image(self.latest_frame)
+        obstacle_dist = self.obstacle_distance()
 
-        prompt = f"""You are a perception module for a mobile robot.
-                    Your goal: Find a box, drive towards it and stop when close.
-                    Rules:
-                    - If object is close → action = "stop"
-                    - If object is not visible → action = "search"
-                    - If object is left → action = "left"
-                    - If object is right → action = "right"
-                    - If object is centered → action = "forward"
-                    Respond ONLY with valid JSON:
-                    {{"action": "search" | "left" | "right" | "forward" | "stop"}}
-                    Image size: {self.latest_frame.shape}"""
+        prompt = f"""
+                    Task: Find a BLUE SQUARE BOX and give a location (left, right, center). If you do not see this object, return not visible.
+                    Do not think too much, just answer based on the current image. Follow your intuition, and do not try to be accurate.
+                    Output JSON in format: {{"position": "left/right/center/not visible"}}"""
 
         response = requests.post(
             "http://192.168.224.1:11434/api/generate",
             json={
-                "model": "qwen3.5:4b",
+                "model": "qwen3.5:9b",
                 "prompt": prompt,
                 "images": [image_base64],
                 "stream": False,
+                "options": {
+                    "presence_penalty": 1.5,
+                    "temperature": 1.0,
+                    "top_k": 20,
+                    "top_p": 0.95
+                }
             },
         )
         self.get_logger().info(response.json()["thinking"])
@@ -179,30 +213,45 @@ class LLMController(Node):
 
         data = json.loads(match.group(0))
 
-        action = data["action"].lower()
+        action = data["position"].lower()
         self.last_actions.append(action)
         if len(self.last_actions) > 2:
             self.last_actions.pop(0)
 
         self.get_logger().info(f"LLM action: {action}")
 
-        if action in ["search", "left", "right", "forward", "stop"]:
-            if action == "search":
+        # if action in ["search", "left", "right", "forward", "stop"]:
+        #     if action == "search":
+        #         action = "left"
+        #         value = 30
+        #     elif action == "left":
+        #         value = 12.5
+        #     elif action == "right":
+        #         value = 12.5
+        #     elif action == "forward":
+        #         value = 0.5
+        #     else:
+        #         value = 0
+        #     self.send_action(action, value)
+            
+        #     if action == "stop":
+        #         self.running = False
+        #         self.get_logger().info(f"Stopping LLM")
+
+        if action in ["left", "right", "center", "not visible"]:
+            if action == "not visible":
                 action = "left"
-                value = 25
+                value = 30
             elif action == "left":
-                value = 10
+                value = 12.5
             elif action == "right":
-                value = 10
-            elif action == "forward":
-                value = 20
+                value = 12.5
+            elif action == "center":
+                action = "forward"
+                value = 0.5
             else:
                 value = 0
             self.send_action(action, value)
-            
-            if action == "stop":
-                self.running = False
-                self.get_logger().info(f"Stopping LLM")
 
     def agent_loop(self):
         while rclpy.ok() and self.running:
