@@ -8,6 +8,7 @@ from launch.substitutions import Command
 
 import os
 
+world = "/usr/share/gazebo-11/worlds/cafe.world"
 
 def generate_launch_description():
 
@@ -24,7 +25,10 @@ def generate_launch_description():
                 'launch',
                 'gazebo.launch.py'
             )
-        )
+        ),
+        # launch_arguments={
+        #     'world': world
+        # }.items()
     )
 
     # --- robot state publisher ---

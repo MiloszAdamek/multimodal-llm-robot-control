@@ -30,13 +30,6 @@ class LLMController(Node):
         super().__init__('llm_controller')
 
         self.create_subscription(
-            Odometry,
-            '/odom',
-            self.odom_callback,
-            10
-        )
-
-        self.create_subscription(
             Bool,
             '/llm_shutdown',
             self.shutdown_callback,
@@ -73,14 +66,6 @@ class LLMController(Node):
 
         # Current state
         self.last_actions = ["None","None"]
-        self.current_x = 0.0
-        self.current_y = 0.0
-        self.current_yaw = 0.0
-
-        # Publisher for path visualization
-        self.path_publisher = self.create_publisher(Path, '/robot_path', 10)
-        self.path_msg = Path()
-        self.path_msg.header.frame_id = "odom"
 
         # Thread control
         self.running = True
@@ -101,26 +86,6 @@ class LLMController(Node):
 
         self.latest_depth = depth
 
-    def obstacle_distance(self):
-        if self.latest_depth is None:
-            return False
-
-        depth = self.latest_depth
-
-        h, w = depth.shape
-
-        roi = depth[h//2 - 20:h//2 + 20, w//2 - 20:w//2 + 20]
-
-        roi = roi[~np.isnan(roi)]
-        roi = roi[roi > 0.01]
-
-        if len(roi) == 0:
-            return False
-
-        min_dist = np.min(roi)
-
-        return min_dist
-
     def camera_callback(self, msg):
         frame = self.bridge.imgmsg_to_cv2(
             msg,
@@ -133,35 +98,6 @@ class LLMController(Node):
         _, buffer = cv2.imencode('.jpg', frame)
 
         return base64.b64encode(buffer).decode('utf-8')
-
-    def quaternion_to_yaw(self, q):
-        siny_cosp = 2 * (q.w * q.z + q.x * q.y)
-        cosy_cosp = 1 - 2 * (q.y * q.y + q.z * q.z)
-        return math.atan2(siny_cosp, cosy_cosp)
-
-    def odom_callback(self, msg):
-        self.current_x = msg.pose.pose.position.x
-        self.current_y = msg.pose.pose.position.y
-        self.current_yaw = self.quaternion_to_yaw(msg.pose.pose.orientation)
-
-        # Update path for visualization
-        pose = PoseStamped()
-        pose.header.frame_id = "odom"
-        pose.header.stamp = self.get_clock().now().to_msg()
-
-        pose.pose.position.x = self.current_x
-        pose.pose.position.y = self.current_y
-        pose.pose.position.z = 0.0
-        pose.pose.orientation = msg.pose.pose.orientation
-
-        self.path_msg.header.stamp = pose.header.stamp
-        self.path_msg.poses.append(pose)
-
-        # Max path length
-        if len(self.path_msg.poses) > 2000:
-            self.path_msg.poses.pop(0)
-
-        self.path_publisher.publish(self.path_msg)
 
     def send_action(self, action, value):
         request = DoRobotAction.Request()
@@ -181,8 +117,8 @@ class LLMController(Node):
             return
 
         image_base64 = self.encode_image(self.latest_frame)
-        obstacle_dist = self.obstacle_distance()
 
+        # Find a BLUE SQUARE BOX and give a location (left, right, center).
         prompt = f"""
                     Task: Find a BLUE SQUARE BOX and give a location (left, right, center). If you do not see this object, return not visible.
                     Do not think too much, just answer based on the current image. Follow your intuition, and do not try to be accurate.

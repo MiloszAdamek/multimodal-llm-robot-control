@@ -10,12 +10,20 @@ from llm_controller_interfaces.srv import DoRobotAction
 import math
 import time
 import numpy as np
+import csv
 
 class MotionServer(Node):
     def __init__(self):
         super().__init__('motion_server')
         self.ang_speed = 0.3
         self.lin_speed = 0.1
+
+        self.create_subscription(
+            Odometry,
+            '/odom',
+            self.odom_callback,
+            10
+        )
 
         self.srv = self.create_service(DoRobotAction, 'do_robot_action', self.do_action_callback)
         self.publisher = self.create_publisher(Twist, '/cmd_vel', 10)
@@ -25,6 +33,10 @@ class MotionServer(Node):
             '/llm_shutdown',
             10
         )
+
+        # State
+        self.current_pose = None
+        self.path = []
 
         # Depth Camera
         self.bridge = CvBridge()
@@ -36,6 +48,24 @@ class MotionServer(Node):
             self.depth_callback,
             10
         )
+
+    def odom_callback(self, msg):
+        self.current_pose = (
+            msg.pose.pose.position.x,
+            msg.pose.pose.position.y
+        )
+
+    def save_pose(self):
+        if self.current_pose is not None:
+            self.path.append(self.current_pose)
+
+    def save_path_to_file(self):
+        with open("path.csv", "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["x", "y"])
+
+            for x, y in self.path:
+                writer.writerow([x, y])
 
     def depth_callback(self, msg):
         depth = self.bridge.imgmsg_to_cv2(
@@ -75,6 +105,8 @@ class MotionServer(Node):
         value = request.value
 
         msg = Twist()
+        
+        self.save_pose()
 
         if action == "left":
             duration = math.radians(value) / self.ang_speed
@@ -82,6 +114,7 @@ class MotionServer(Node):
             start = time.time()
 
             while time.time() - start < duration:
+                self.save_pose()
                 self.publisher.publish(msg)
                 time.sleep(0.05)
 
@@ -91,6 +124,7 @@ class MotionServer(Node):
             start = time.time()
 
             while time.time() - start < duration:
+                self.save_pose()
                 self.publisher.publish(msg)
                 time.sleep(0.05)
 
@@ -100,6 +134,7 @@ class MotionServer(Node):
             msg.linear.x = self.lin_speed
 
             if self.is_obstacle_close(1.0):
+                    self.save_path_to_file()
                     msg_shutdown = Bool()
                     msg_shutdown.data = True
                     self.shutdown_pub.publish(msg_shutdown)
@@ -110,6 +145,7 @@ class MotionServer(Node):
             else:
                 start = time.time()
                 while time.time() - start < duration:
+                    self.save_pose()
                     self.publisher.publish(msg)
                     time.sleep(0.05)
 
