@@ -26,9 +26,9 @@ def generate_launch_description():
                 'gazebo.launch.py'
             )
         ),
-        # launch_arguments={
-        #     'world': world
-        # }.items()
+        launch_arguments={
+            'world': world
+        }.items()
     )
 
     # --- robot state publisher ---

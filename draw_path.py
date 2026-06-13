@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle, Circle
 
 def add_box(ax, x, y, size=1.0, color="blue", label=None):
-    # Gazebo box is centered → convert to bottom-left corner
     half = size / 2.0
     rect = Rectangle(
         (x - half, y - half),
@@ -33,7 +32,7 @@ def add_circle(ax, x, y, radius=0.5, color="purple", label=None):
 
 def main():
     # ===== PATH =====
-    df = pd.read_csv("ros2/path1.csv")
+    df = pd.read_csv("ros2/path2.csv")
 
     x = df["x"].values
     y = df["y"].values
@@ -42,25 +41,22 @@ def main():
 
     ax.plot(x, y, "-o", label="Path")
 
-    ax.scatter(x[0], y[0], c="green", s=80, label="Start")
-    ax.scatter(x[-1], y[-1], c="red", s=80, label="End")
-
-    # ===== OBJECTS (Gazebo world) =====
-
-    # Blue box (assume 1m x 1m)
-    add_box(ax, 1.0, 4.0, size=1.0, color="blue", label="Blue box")
-
-    # Red box
-    add_box(ax, 3.74, 0.65, size=1.0, color="red", label="Red box")
-
-    # Circle object (assume radius 0.5m)
-    add_circle(ax, 3.66, -2.11, radius=0.5, color="purple", label="Circle")
+    # ===== OBJECTS =====
+    add_box(ax, 1.0, 4.0, size=1.0, color="blue", label="Target object") # path1
+    # add_box(ax, -4.33, 0.14, size=1.0, color="gray", label="Target object") # path_cafe
+    # add_box(ax, 3.74, 0.65, size=1.0, color="red", label="Red box")
+    # add_circle(ax, 3.66, -2.11, radius=0.5, color="purple", label="Circle")
 
     # ===== STYLE =====
     ax.set_xlabel("X [m]")
     ax.set_ylabel("Y [m]")
-    ax.set_title("Robot path + Gazebo objects (real size)")
-    ax.axis("equal")
+    # ax.set_title("Sequence of actions")
+    #ax.axis("equal")
+    ax.text(0.5, 1.02,
+    "Number of actions: 6\nAverage action selection time: 17.50 s",
+    transform=ax.transAxes, ha="center", fontsize=9)
+    ax.set_xlim(-2, 6)
+    ax.set_ylim(-3, 5)
     ax.grid(True)
     ax.legend()
 
